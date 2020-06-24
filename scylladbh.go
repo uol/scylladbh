@@ -8,6 +8,11 @@ import (
 	"github.com/uol/funks"
 )
 
+//
+// Helps to configure gocql and gocqlx.
+// author: rnojiri
+//
+
 // Configuration - the connection configuration
 type Configuration struct {
 	Nodes             []string       `json:"nodes,omitempty"`
