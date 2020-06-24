@@ -1,0 +1,7 @@
+nodes = ["node1", "node2", "node3"]
+port = 19042
+numConnections = 5
+reconnectInterval = "10s"
+keyspace = "test"
+username = "cassandra"
+password = "c4554ndr4"
