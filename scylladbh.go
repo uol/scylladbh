@@ -2,6 +2,9 @@ package scylladbh
 
 import (
 	"fmt"
+	"os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/gocql/gocql"
 	"github.com/scylladb/gocqlx/v2"
@@ -13,6 +16,8 @@ import (
 // author: rnojiri
 //
 
+const defaultProtoVersion int = 3
+
 // Configuration - the connection configuration
 type Configuration struct {
 	Nodes             []string       `json:"nodes,omitempty"`
@@ -22,6 +27,7 @@ type Configuration struct {
 	Keyspace          string         `json:"keyspace,omitempty"`
 	Username          string         `json:"username,omitempty"`
 	Password          string         `json:"password,omitempty"`
+	ProtoVersion      int            `json:"protoVersion,omitempty"`
 }
 
 var (
@@ -32,8 +38,8 @@ var (
 	ErrNoNodes error = fmt.Errorf("no nodes configured")
 )
 
-// NewSession - creates a new session using gocql
-func NewSession(configuration *Configuration) (*gocql.Session, error) {
+// newSession - generic new session
+func newSession(configuration *Configuration, isDocker bool, dockerInspectIPPath string) (*gocql.Session, error) {
 
 	if configuration == nil {
 		return nil, ErrNullConf
@@ -41,6 +47,34 @@ func NewSession(configuration *Configuration) (*gocql.Session, error) {
 
 	if len(configuration.Nodes) == 0 {
 		return nil, ErrNoNodes
+	}
+
+	if isDocker {
+
+		if len(dockerInspectIPPath) == 0 {
+			dockerInspectIPPath = ".NetworkSettings.Networks.bridge.IPAddress"
+		}
+
+		scyllaNodes := strings.Join(configuration.Nodes, " ")
+
+		output, err := exec.Command("docker", "inspect", "--format='{{ "+dockerInspectIPPath+" }}'", scyllaNodes).Output()
+		if err != nil {
+			return nil, err
+		}
+
+		lines := strings.Split(string(output), "\n")
+		lines = lines[0 : len(lines)-1]
+
+		validIP := regexp.MustCompile("[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
+
+		for i := 0; i < len(lines); i++ {
+			lines[i] = strings.Trim(lines[i], "'")
+			if !validIP.MatchString(lines[i]) {
+				return nil, fmt.Errorf("'%s' is not a valid IP", lines[i])
+			}
+		}
+
+		configuration.Nodes = lines
 	}
 
 	cluster := gocql.NewCluster(configuration.Nodes...)
@@ -66,7 +100,19 @@ func NewSession(configuration *Configuration) (*gocql.Session, error) {
 		cluster.ReconnectInterval = configuration.ReconnectInterval.Duration
 	}
 
+	if configuration.ProtoVersion != 0 {
+		cluster.ProtoVersion = configuration.ProtoVersion
+	} else {
+		cluster.ProtoVersion = defaultProtoVersion
+	}
+
 	return cluster.CreateSession()
+}
+
+// NewSession - creates a new session using gocql
+func NewSession(configuration *Configuration) (*gocql.Session, error) {
+
+	return newSession(configuration, false, "")
 }
 
 // NewSessionX - creates a new session using gocqlx
@@ -78,4 +124,16 @@ func NewSessionX(configuration *Configuration) (*gocqlx.Session, error) {
 	}
 
 	return &session, nil
+}
+
+// NewDockerSession - connects to a scylla cluster in docker (use nodes parameter to name the pods)
+func NewDockerSession(configuration *Configuration, dockerInspectIPPath string) (*gocql.Session, error) {
+
+	return newSession(configuration, true, dockerInspectIPPath)
+}
+
+// NewDockerSessionX - connects to a scylla cluster in docker (use nodes parameter to name the pods)
+func NewDockerSessionX(configuration *Configuration, dockerInspectIPPath string) (*gocql.Session, error) {
+
+	return NewDockerSession(configuration, dockerInspectIPPath)
 }

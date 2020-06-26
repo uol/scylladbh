@@ -5,5 +5,6 @@
     "reconnectInterval": "10s",
     "keyspace": "test",
     "username": "cassandra",
-    "password": "c4554ndr4"
+    "password": "c4554ndr4",
+    "protoVersion": 2
 }
