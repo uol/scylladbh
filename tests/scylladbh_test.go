@@ -2,11 +2,8 @@ package scylladbh_test
 
 import (
 	"encoding/json"
-	"net"
-	"os/exec"
 	"reflect"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/uol/funks"
 	"github.com/uol/gofiles"
+	docker "github.com/uol/gotest/docker"
 	"github.com/uol/scylladbh"
 )
 
@@ -112,66 +110,37 @@ func TestLoadingFromJSON(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(expectedConf, conf), "expected same configuration: %s", string(jsonBytes))
 }
 
-func removeScyllaDocker(pod string) {
-
-	exec.Command("/bin/sh", "-c", "docker rm -f "+pod).Run()
-}
-
-func startScyllaDocker(t *testing.T, pod string) bool {
-
-	output, err := exec.Command("/bin/sh", "-c", "docker run --name "+pod+" -p 9042:9042 -d scylladb/scylla").Output()
-
-	if !assert.NoError(t, err, "error executing run command, output: %s", string(output)) {
-		return false
-	}
-
-	if !assert.Regexp(t, regexp.MustCompile("[a-f0-9]{64}"), string(output), "pod was not created") {
-		return false
-	}
-
-	output, err = exec.Command("docker", "inspect", "--format='{{ .NetworkSettings.Networks.bridge.IPAddress }}'", pod).Output()
-	if !assert.NoError(t, err, "not expecting error checking pod ip") {
-		return false
-	}
-
-	lines := strings.Split(string(output), "\n")
-	host := strings.Trim(lines[0], "'")
-	start := time.Now()
-	connected := false
-
-	// wait scylla to start listening on 9042
-	for {
-		if time.Now().Sub(start).Seconds() > 60 {
-			break
-		}
-
-		<-time.After(1 * time.Second)
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, "9042"), 1*time.Second)
-		if err != nil {
-			continue
-		}
-		if conn != nil {
-			defer conn.Close()
-			connected = true
-			break
-		}
-	}
-
-	return assert.True(t, connected, "expected connection to the scylla node")
-}
-
-// TestDockerAutoConnection - test the docker automatic connection
-func TestDockerAutoConnection(t *testing.T) {
+// TestSuiteDocker - tests a suite of tests using a pod
+func TestSuiteDocker(t *testing.T) {
 
 	pod := "test-scylla"
 
-	removeScyllaDocker(pod)
+	docker.Remove(pod)
 
-	if !startScyllaDocker(t, pod) {
+	_, err := docker.StartScylla(pod, "", "", 60*time.Second)
+	if !assert.NoError(t, err, "error not expected creating scylla pod") {
 		return
 	}
 
-	defer removeScyllaDocker(pod)
+	defer docker.Remove(pod)
+
+	suite := []struct {
+		title string
+		run   func(t *testing.T, pod string)
+	}{
+		{"normal gocql session", testDockerAutoConnection},
+		{"gocql x session", testDockerAutoConnectionX},
+	}
+
+	for _, test := range suite {
+		t.Run(test.title, func(t *testing.T) {
+			test.run(t, pod)
+		})
+	}
+}
+
+// testDockerAutoConnection - test the docker automatic connection
+func testDockerAutoConnection(t *testing.T, pod string) {
 
 	conf := &scylladbh.Configuration{
 		Nodes: []string{pod},
@@ -194,18 +163,8 @@ func TestDockerAutoConnection(t *testing.T) {
 	assert.Regexp(t, regexp.MustCompile("[a-zA-Z_]+"), text, "expecting a valid keyspace name: %s", text)
 }
 
-// TestDockerAutoConnectionX - test the docker automatic connection x
-func TestDockerAutoConnectionX(t *testing.T) {
-
-	pod := "test-scylla"
-
-	removeScyllaDocker(pod)
-
-	if !startScyllaDocker(t, pod) {
-		return
-	}
-
-	defer removeScyllaDocker(pod)
+// testDockerAutoConnectionX - test the docker automatic connection x
+func testDockerAutoConnectionX(t *testing.T, pod string) {
 
 	conf := &scylladbh.Configuration{
 		Nodes: []string{pod},

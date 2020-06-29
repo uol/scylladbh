@@ -2,13 +2,11 @@ package scylladbh
 
 import (
 	"fmt"
-	"os/exec"
-	"regexp"
-	"strings"
 
 	"github.com/gocql/gocql"
 	"github.com/scylladb/gocqlx/v2"
 	"github.com/uol/funks"
+	"github.com/uol/gotest/docker"
 )
 
 //
@@ -51,30 +49,12 @@ func newSession(configuration *Configuration, isDocker bool, dockerInspectIPPath
 
 	if isDocker {
 
-		if len(dockerInspectIPPath) == 0 {
-			dockerInspectIPPath = ".NetworkSettings.Networks.bridge.IPAddress"
-		}
-
-		scyllaNodes := strings.Join(configuration.Nodes, " ")
-
-		output, err := exec.Command("docker", "inspect", "--format='{{ "+dockerInspectIPPath+" }}'", scyllaNodes).Output()
+		ips, err := docker.GetIPs(dockerInspectIPPath, configuration.Nodes...)
 		if err != nil {
 			return nil, err
 		}
 
-		lines := strings.Split(string(output), "\n")
-		lines = lines[0 : len(lines)-1]
-
-		validIP := regexp.MustCompile("[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
-
-		for i := 0; i < len(lines); i++ {
-			lines[i] = strings.Trim(lines[i], "'")
-			if !validIP.MatchString(lines[i]) {
-				return nil, fmt.Errorf("'%s' is not a valid IP", lines[i])
-			}
-		}
-
-		configuration.Nodes = lines
+		configuration.Nodes = ips
 	}
 
 	cluster := gocql.NewCluster(configuration.Nodes...)
