@@ -26,6 +26,7 @@ type Configuration struct {
 	Username          string         `json:"username,omitempty"`
 	Password          string         `json:"password,omitempty"`
 	ProtoVersion      int            `json:"protoVersion,omitempty"`
+	Timeout           funks.Duration `json:"timeout,omitempty"`
 }
 
 var (
@@ -84,6 +85,10 @@ func newSession(configuration *Configuration, isDocker bool, dockerInspectIPPath
 		cluster.ProtoVersion = configuration.ProtoVersion
 	} else {
 		cluster.ProtoVersion = defaultProtoVersion
+	}
+
+	if configuration.Timeout.Duration != 0 {
+		cluster.Timeout = configuration.Timeout.Duration
 	}
 
 	return cluster.CreateSession()

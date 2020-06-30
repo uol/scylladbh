@@ -72,6 +72,7 @@ var expectedConf scylladbh.Configuration = scylladbh.Configuration{
 	ReconnectInterval: *funks.ForceNewStringDuration("10s"),
 	Username:          "cassandra",
 	ProtoVersion:      2,
+	Timeout:           *funks.ForceNewStringDuration("31s"),
 }
 
 // TestLoadingFromToml - test loading configuration from a toml file
