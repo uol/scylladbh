@@ -9,9 +9,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
+	"github.com/uol/dockerh"
 	"github.com/uol/funks"
 	"github.com/uol/gofiles"
-	docker "github.com/uol/gotest/docker"
 	"github.com/uol/scylladbh"
 )
 
@@ -117,14 +117,14 @@ func TestSuiteDocker(t *testing.T) {
 
 	pod := "test-scylla"
 
-	docker.Remove(pod)
+	dockerh.Remove(pod)
 
-	_, err := docker.StartScylla(pod, "", "", 60*time.Second)
+	_, err := dockerh.StartScylla(pod, "", "", 60*time.Second)
 	if !assert.NoError(t, err, "error not expected creating scylla pod") {
 		return
 	}
 
-	defer docker.Remove(pod)
+	defer dockerh.Remove(pod)
 
 	suite := []struct {
 		title string

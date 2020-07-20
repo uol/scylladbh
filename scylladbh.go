@@ -5,8 +5,8 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/scylladb/gocqlx/v2"
+	"github.com/uol/dockerh"
 	"github.com/uol/funks"
-	"github.com/uol/gotest/docker"
 )
 
 //
@@ -101,7 +101,7 @@ func newSession(configuration *Configuration, isDocker bool, dockerInspectIPPath
 
 	if isDocker {
 
-		ips, err := docker.GetIPs(dockerInspectIPPath, configuration.Nodes...)
+		ips, err := dockerh.GetIPs(dockerInspectIPPath, configuration.Nodes...)
 		if err != nil {
 			return nil, err
 		}
