@@ -95,7 +95,7 @@ func newSession(configuration *Configuration, isDocker bool, dockerInspectIPPath
 		return nil, ErrNullConf
 	}
 
-	if len(configuration.Nodes) == 0 {
+	if !isDocker && len(configuration.Nodes) == 0 {
 		return nil, ErrNoNodes
 	}
 
