@@ -118,7 +118,12 @@ func NewDockerSession(configuration *Configuration, dockerInspectIPPath string) 
 }
 
 // NewDockerSessionX - connects to a scylla cluster in docker (use nodes parameter to name the pods)
-func NewDockerSessionX(configuration *Configuration, dockerInspectIPPath string) (*gocql.Session, error) {
+func NewDockerSessionX(configuration *Configuration, dockerInspectIPPath string) (*gocqlx.Session, error) {
 
-	return NewDockerSession(configuration, dockerInspectIPPath)
+	session, err := gocqlx.WrapSession(NewDockerSession(configuration, dockerInspectIPPath))
+	if err != nil {
+		return nil, err
+	}
+
+	return &session, nil
 }

@@ -180,7 +180,7 @@ func testDockerAutoConnectionX(t *testing.T, pod string) {
 
 	text := ""
 
-	err = sx.Query("select table_name from system_schema.tables limit 1").Scan(&text)
+	err = sx.Session.Query("select table_name from system_schema.tables limit 1").Scan(&text)
 	if !assert.NoError(t, err, "expected no error running tables query") {
 		return
 	}
