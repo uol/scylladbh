@@ -7,5 +7,6 @@
     "username": "cassandra",
     "password": "c4554ndr4",
     "protoVersion": 2,
-    "timeout": "31s"
+    "timeout": "31s",
+    "consistency": "localQuorum"
 }

@@ -73,6 +73,7 @@ var expectedConf scylladbh.Configuration = scylladbh.Configuration{
 	Username:          "cassandra",
 	ProtoVersion:      2,
 	Timeout:           *funks.ForceNewStringDuration("31s"),
+	Consistency:       scylladbh.LocalQuorum,
 }
 
 // TestLoadingFromToml - test loading configuration from a toml file

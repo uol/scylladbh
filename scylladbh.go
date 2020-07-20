@@ -27,7 +27,32 @@ type Configuration struct {
 	Password          string         `json:"password,omitempty"`
 	ProtoVersion      int            `json:"protoVersion,omitempty"`
 	Timeout           funks.Duration `json:"timeout,omitempty"`
+	Consistency       Consistency    `json:"consistency,omitempty"`
 }
+
+// Consistency - the consistency wrapper
+type Consistency string
+
+const (
+	// Any - scylladb consistency
+	Any Consistency = "any"
+	// One - scylladb consistency
+	One Consistency = "one"
+	// Two - scylladb consistency
+	Two Consistency = "two"
+	// Three - scylladb consistency
+	Three Consistency = "three"
+	// Quorum - scylladb consistency
+	Quorum Consistency = "quorum"
+	// All - scylladb consistency
+	All Consistency = "all"
+	// LocalQuorum - scylladb consistency
+	LocalQuorum Consistency = "localQuorum"
+	// EachQuorum - scylladb consistency
+	EachQuorum Consistency = "eachQuorum"
+	// LocalOne - scylladb consistency
+	LocalOne Consistency = "localOne"
+)
 
 var (
 	// ErrNullConf - raised when the configuration is null
@@ -36,6 +61,32 @@ var (
 	// ErrNoNodes - raised when there are no nodes configured
 	ErrNoNodes error = fmt.Errorf("no nodes configured")
 )
+
+func getConsistencyCode(consistency Consistency) gocql.Consistency {
+
+	switch consistency {
+	case Any:
+		return gocql.Any
+	case One:
+		return gocql.One
+	case Two:
+		return gocql.Two
+	case Three:
+		return gocql.Three
+	case Quorum:
+		return gocql.Quorum
+	case All:
+		return gocql.All
+	case LocalQuorum:
+		return gocql.LocalQuorum
+	case EachQuorum:
+		return gocql.EachQuorum
+	case LocalOne:
+		return gocql.LocalOne
+	default:
+		return gocql.Quorum
+	}
+}
 
 // newSession - generic new session
 func newSession(configuration *Configuration, isDocker bool, dockerInspectIPPath string) (*gocql.Session, error) {
@@ -89,6 +140,10 @@ func newSession(configuration *Configuration, isDocker bool, dockerInspectIPPath
 
 	if configuration.Timeout.Duration != 0 {
 		cluster.Timeout = configuration.Timeout.Duration
+	}
+
+	if len(configuration.Consistency) > 0 {
+		cluster.Consistency = getConsistencyCode(configuration.Consistency)
 	}
 
 	return cluster.CreateSession()
